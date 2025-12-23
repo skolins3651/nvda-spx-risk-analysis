@@ -1,0 +1,10 @@
+tickers:
+  spx: "^GSPC"
+  nvda: "NVDA"
+
+data:
+  start: "2018-01-01"
+  end: null
+
+weights:
+  nvda_weight_static: 0.07  # placeholder until we add a real weight series
