@@ -31,6 +31,17 @@ def download_prices(spx_ticker: str,
     close = close.dropna() # drop any rows with missing data
     return close
 
+def compute_returns(prices: pd.DataFrame) -> pd.DataFrame:
+    """
+       Compute daily returns for SPX and NVDA from the provided prices DataFrame.
+       Formula: r_t = (P_t - P_{t-1}) / P_{t-1} = (P_t / P_{t-1}) - 1
+       We drop the first row of returns because it will be NaN (no previous day to compute a return).
+    """
+    rets = prices.pct_change()
+    rets = rets.iloc[1:] # drop the first row with NaN return
+    # remember: this NaN is because the first row has no previous day to compute a return
+    # if return dataframes are collated, this missing value must be readded later
+    return rets
 
 
 
