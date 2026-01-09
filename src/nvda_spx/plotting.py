@@ -7,12 +7,22 @@ import matplotlib.pyplot as plt
 def plot_cumulative(
     returns: pd.DataFrame,
     title: str = "Cumulative Growth of $1",
+    annotations: dict[str | pd.Timestamp, str] | None = None,
 ):
     """
     Plot cumulative growth of $1 for one or more return series.
     If returns are simple returns r_i, then cumulative growth is computed as:
     Growth_t = (1 + r_1) * (1 + r_2) * ... * (1 + r_t) = cumprod(1 + r_i)
     We use "growth of $1" for interpretability.
+
+    Parameters
+    ----------
+    returns : pd.DataFrame
+        Each column is a return series (simple returns).
+    title : str
+        Plot title.
+    annotations : dict[date, label] | None
+        Optional vertical line markers with labels.
     """
     growth = (1 + returns).cumprod()
 
@@ -20,6 +30,21 @@ def plot_cumulative(
     ax.set_title(title)
     ax.set_ylabel("Growth of $1")
     ax.grid(True, alpha=0.3)
+
+    if annotations:
+        for dt, label in annotations.items():
+            dt = pd.Timestamp(dt)
+            ax.axvline(dt, linestyle="--", alpha=0.5)
+            # place label near the top of the plot
+            ax.text(
+                dt,
+                ax.get_ylim()[1],
+                f" {label}",
+                rotation=90,
+                verticalalignment="top",
+                fontsize=9,
+                alpha=0.7,
+            )
 
     return ax
 
