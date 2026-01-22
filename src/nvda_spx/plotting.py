@@ -96,3 +96,54 @@ def plot_rolling_beta(
     ax.legend(loc="upper right")
 
     return ax
+
+def plot_rolling_beta_windows(
+    y: pd.Series,
+    x: pd.Series,
+    windows: list[int],
+    title: str | None = None,
+):
+    """
+    Plot rolling beta of y on x for multiple window lengths in stacked subplots
+    with shared axes and regime shading.
+    """
+    if not windows:
+        raise ValueError("windows must be a non-empty list of integers.")
+
+    fig, axes = plt.subplots(
+        nrows=len(windows),
+        ncols=1,
+        figsize=(10, 3 * len(windows)),
+        sharex=True,
+        sharey=True,
+    )
+
+    # if there's only one window, axes is a single Axes object; normalize to list
+    if len(windows) == 1:
+        axes = [axes]
+
+    betas = []
+    for ax, w in zip(axes, windows):
+        beta = rolling_beta(y, x, window=w)
+        betas.append(beta)
+
+        beta.plot(ax=ax)
+        ax.set_title(f"Rolling Beta (window={w})")
+        ax.set_ylabel("Beta")
+        ax.grid(True, alpha=0.3)
+
+        # regime shading (same as plot_rolling_beta)
+        ax.axhspan(0.00, 0.05, color="gray", alpha=0.1, label="Marginal")
+        ax.axhspan(0.05, 0.10, color="blue", alpha=0.1, label="Influential")
+        ax.axhspan(0.10, 0.15, color="orange", alpha=0.1, label="Strong")
+        ax.axhspan(0.15, 1.00, color="red", alpha=0.1, label="Systemic")
+
+    if title:
+        fig.suptitle(title)
+
+    # put a single legend on the top subplot (avoid repeating)
+    axes[0].legend(loc="upper right")
+
+    fig.tight_layout()
+
+    return fig, axes
