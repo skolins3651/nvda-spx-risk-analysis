@@ -138,6 +138,10 @@ def plot_rolling_beta_windows(
         ax.axhspan(0.10, 0.15, color="orange", alpha=0.1, label="Strong")
         ax.axhspan(0.15, 1.00, color="red", alpha=0.1, label="Systemic")
 
+    # disable the minor ticks because they clutter the shared x-axis and look ugly
+    for ax in axes:
+        ax.minorticks_off()
+
     if title:
         fig.suptitle(title)
 
