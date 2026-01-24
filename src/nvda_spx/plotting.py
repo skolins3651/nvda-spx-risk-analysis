@@ -151,3 +151,62 @@ def plot_rolling_beta_windows(
     fig.tight_layout()
 
     return fig, axes
+
+def plot_sensitivity_heatmap(
+    sens: pd.DataFrame,
+    metric: str = "max_drawdown_pct",
+    title: str | None = None,
+):
+    """
+    Plot a heatmap from a sensitivity table with MultiIndex (weight, scenario).
+
+    Parameters
+    ----------
+    sens : pd.DataFrame
+        Output of weight_sensitivity_table with index (weight, scenario).
+    metric : str
+        Column of `sens` to visualize (e.g., 'max_drawdown_pct', 'days_to_recovery').
+    title : str | None
+        Optional plot title.
+    """
+    if metric not in sens.columns:
+        raise KeyError(f"Metric '{metric}' not found in sensitivity table.")
+
+    df = sens.reset_index().copy()
+
+    # parse scenario like "SPX_shock_-30pct" -> -30 (int)
+    def parse_shock_pct(s: str) -> int:
+        s = str(s)
+        marker = "SPX_shock_"
+        if not s.startswith(marker) or not s.endswith("pct"):
+            raise ValueError(f"Unrecognized scenario label: {s}")
+        core = s[len(marker):-3]  # strip prefix and 'pct'
+        return int(core)
+
+    df["shock_pct"] = df["scenario"].apply(parse_shock_pct)
+
+    # build grid: rows = weight, cols = shock_pct
+    grid = df.pivot(index="weight", columns="shock_pct", values=metric).sort_index()
+    grid = grid.reindex(sorted(grid.columns), axis=1)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    im = ax.imshow(grid.values, aspect="auto")
+
+    # axis ticks and labels
+    ax.set_xticks(range(len(grid.columns)))
+    ax.set_xticklabels([f"{c}%" for c in grid.columns])
+
+    ax.set_yticks(range(len(grid.index)))
+    ax.set_yticklabels([f"{w * 100:.0f}%" for w in grid.index])
+
+    ax.set_xlabel("NVDA shock size (one-day return)")
+    ax.set_ylabel("Assumed NVDA weight in SPX")
+    ax.set_title(title or f"Sensitivity heatmap: {metric}")
+
+    # colorbar
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label(metric)
+
+    fig.tight_layout()
+    return fig, ax
