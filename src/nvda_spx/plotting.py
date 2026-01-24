@@ -1,4 +1,5 @@
 from __future__ import annotations
+import warnings
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -160,6 +161,7 @@ def plot_sensitivity_heatmap(
     cmap: str = "Reds",
     annotate: bool = False,
     fmt: str | None = None,
+    max_annot_cells: int = 100,
 ):
     """
     Plot a heatmap from a sensitivity table with MultiIndex (weight, scenario).
@@ -183,6 +185,9 @@ def plot_sensitivity_heatmap(
     fmt : str | None = None
         Format string for annotations (e.g., ".2f" for two decimal places).
         To format days as integers, pass fmt=".0f" explicitly.
+    max_annot_cells : int = 100
+        Maximum number of cells to annotate. If the heatmap has more cells,
+        annotations will be skipped to avoid clutter. A warning will be issued.
 
     Note: Colorbar and optional annotations show the *true metric values*.
     """
@@ -246,16 +251,41 @@ def plot_sensitivity_heatmap(
 
     # optional annotations also show true metric values
     if annotate:
-        if fmt is None:
-            # sensible defaults
-            fmt = ".2f" if metric.endswith("_pct") else ".0f"
+        if grid.size > max_annot_cells:
+            import warnings
 
-        for i in range(grid.shape[0]):
-            for j in range(grid.shape[1]):
-                v = grid.iat[i, j]
-                if pd.isna(v):
-                    continue
-                ax.text(j, i, format(v, fmt), ha="center", va="center")
+            warnings.warn(
+                f"Annotations skipped: grid has {grid.size} cells "
+                f"(max_annot_cells={max_annot_cells}).",
+                UserWarning,
+            )
+        else:
+            if fmt is None:
+                # sensible defaults
+                fmt = ".2f" if metric.endswith("_pct") else ".0f"
+
+            import numpy as np
+
+            norm = im.norm
+            cmap_obj = im.get_cmap()
+
+            for i in range(grid.shape[0]):
+                for j in range(grid.shape[1]):
+                    v = grid.iat[i, j]
+                    if pd.isna(v):
+                        continue
+                    
+                    # severity value used for color
+                    s = severity[i, j]
+
+                    # convert severity to RGBA, compute luminance, choose text color
+                    # this ensures readability against the background color
+                    rgba = cmap_obj(norm(s))
+                    r, g, b, _ = rgba
+                    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+                    text_color = "white" if luminance < 0.5 else "black"
+
+                    ax.text(j, i, format(v, fmt), ha="center", va="center", color = text_color)
 
     fig.tight_layout()
     return fig, ax
