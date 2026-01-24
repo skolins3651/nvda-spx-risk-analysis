@@ -1,5 +1,8 @@
 import pandas as pd
 
+from src.nvda_spx.ex_nvda import ex_nvda_return
+from src.nvda_spx.scenarios import shocked_spx_returns
+
 def drawdown_metrics(
     returns: pd.Series,
     shock_date: str | pd.Timestamp,
@@ -87,3 +90,54 @@ def summarize_shock_scenarios(
     summary = summary[desired_order]
 
     return summary
+
+def weight_sensitivity_table(
+    spx_ret: pd.Series,
+    nvda_ret: pd.Series,
+    weights: list[float],
+    shock_returns: list[float],
+    shock_date: str | pd.Timestamp,
+) -> pd.DataFrame:
+    """
+    Build a sensitivity table across NVDA weights and shock magnitudes.
+
+    Returns a DataFrame with MultiIndex rows (weight, shock) and columns of key metrics.
+    """
+    shock_date = pd.Timestamp(shock_date)
+
+    rows = []
+    for w in weights:
+        # build ex-NVDA returns under this assumed weight
+        ex = ex_nvda_return(spx_ret, nvda_ret, w)
+
+        # build shocked SPX return series for each shock magnitude
+        shock_df = shocked_spx_returns(
+            ex_ret=ex,
+            weight=w,
+            shock_returns=shock_returns,
+            shock_date=shock_date,
+        )
+
+        # summarize scenarios for this weight
+        summary = summarize_shock_scenarios(shock_df, shock_date=shock_date)
+
+        # summary already has max_drawdown_pct in the preferred position
+        # just attach the weight and keep the scenario name as the shock label
+        for scenario_name, r in summary.iterrows():
+            rows.append(
+                {
+                    "weight": w,
+                    "scenario": scenario_name,
+                    "shock_date": r["shock_date"],
+                    "pre_shock_level": r["pre_shock_level"],
+                    "max_drawdown_pct": r["max_drawdown_pct"],
+                    "max_drawdown_date": r["max_drawdown_date"],
+                    "recovery_date": r["recovery_date"],
+                    "days_to_recovery": r["days_to_recovery"],
+                }
+            )
+
+    out = pd.DataFrame(rows).set_index(["weight", "scenario"]).sort_index()
+    return out
+
+
