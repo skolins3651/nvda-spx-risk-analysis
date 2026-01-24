@@ -156,6 +156,10 @@ def plot_sensitivity_heatmap(
     sens: pd.DataFrame,
     metric: str = "max_drawdown_pct",
     title: str | None = None,
+    higher_is_worse: bool | None = None,
+    cmap: str = "Reds",
+    annotate: bool = False,
+    fmt: str | None = None,
 ):
     """
     Plot a heatmap from a sensitivity table with MultiIndex (weight, scenario).
@@ -168,6 +172,19 @@ def plot_sensitivity_heatmap(
         Column of `sens` to visualize (e.g., 'max_drawdown_pct', 'days_to_recovery').
     title : str | None
         Optional plot title.
+    higher_is_worse : bool | None
+        If True, higher metric values are worse (e.g., days to recovery).
+        This is used to align certain metrics so that "worse" outcomes are darker colors.
+        If None, the function will attempt to infer this based on the metric name.
+    cmap : str = "Reds"
+        Matplotlib colormap to use for the heatmap. (Default is "Reds".)
+    annotate : bool = False
+        If True, annotate each cell with the metric value.
+    fmt : str | None = None
+        Format string for annotations (e.g., ".2f" for two decimal places).
+        To format days as integers, pass fmt=".0f" explicitly.
+
+    Note: Colorbar and optional annotations show the *true metric values*.
     """
     if metric not in sens.columns:
         raise KeyError(f"Metric '{metric}' not found in sensitivity table.")
@@ -189,9 +206,19 @@ def plot_sensitivity_heatmap(
     grid = df.pivot(index="weight", columns="shock_pct", values=metric).sort_index()
     grid = grid.reindex(sorted(grid.columns), axis=1)
 
+    # decide direction automatically if not provided
+    # (here, more days to recovery = worse; hence, higher_is_worse = True)
+    if higher_is_worse is None:
+        higher_is_worse = metric in {"days_to_recovery"}
+
+    values = grid.values.copy()
+
+    # severity score (higher = worse)
+    severity = values if higher_is_worse else -values
+
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    im = ax.imshow(grid.values, aspect="auto")
+    im = ax.imshow(severity, aspect="auto", cmap=cmap)
 
     # axis ticks and labels
     ax.set_xticks(range(len(grid.columns)))
@@ -204,9 +231,31 @@ def plot_sensitivity_heatmap(
     ax.set_ylabel("Assumed NVDA weight in SPX")
     ax.set_title(title or f"Sensitivity heatmap: {metric}")
 
-    # colorbar
+    # colorbar (which should now display true metric values)
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label(metric)
+
+    # map colorbar tick positions (severity space) -> labels (metric space)
+    ticks = cbar.get_ticks()
+    if higher_is_worse:
+        tick_labels = ticks
+    else:
+        tick_labels = -ticks
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels([f"{t:g}" for t in tick_labels])
+
+    # optional annotations also show true metric values
+    if annotate:
+        if fmt is None:
+            # sensible defaults
+            fmt = ".2f" if metric.endswith("_pct") else ".0f"
+
+        for i in range(grid.shape[0]):
+            for j in range(grid.shape[1]):
+                v = grid.iat[i, j]
+                if pd.isna(v):
+                    continue
+                ax.text(j, i, format(v, fmt), ha="center", va="center")
 
     fig.tight_layout()
     return fig, ax
