@@ -78,3 +78,7 @@ pip install -r requirements.txt
 * Multi-day shock paths
 * Volatility modeling
 * Cross-constituent comparison
+
+## Disclaimer
+
+This project is for educational and research purposes only and does not constitute investment advice.
