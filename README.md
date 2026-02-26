@@ -60,6 +60,10 @@ src/nvda_spx/
 notebooks/
     00_report.ipynb        # Final structured report
     01_explore_ex_nvda.ipynb  # Exploratory analysis
+
+reports/
+    00_report.html         # Static HTML version of final report
+    00_report.pdf          # Static PDF version of final report
 ```
 
 ## How to Run
@@ -71,6 +75,15 @@ pip install -r requirements.txt
 ```
 3. Open `notebooks/00_report.ipynb`
 4. Run all cells
+
+For readers who prefer not to set up a local Python environment, the static report can be viewed directly:
+
+- `reports/00_report.pdf`
+- `reports/00_report.html`
+
+The fully reproducible source notebook is available at:
+
+- `notebooks/00_report.ipynb`
 
 ## Potential Extensions
 
