@@ -68,7 +68,7 @@ notebooks/
 2. Install dependencies:
 ```
 pip install -r requirements.txt
-``
+```
 3. Open `notebooks/00_report.ipynb`
 4. Run all cells
 
